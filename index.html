@@ -31,6 +31,21 @@
       'LU-11': 'Reanima consciência, alivia calor e garganta.',
       'LU-10': 'Melhora tosse seca, garganta inflamada.',
       'LU-9': 'Tonifica pulmão e circulação.',
+      'HT-9': 'Acalma mente, revigora coração.',
+      'HT-8': 'Reduz ansiedade e palpitações.',
+      'HT-7': 'Melhor ponto para insônia e estresse.',
+      'PC-9': 'Revive consciência, melhora calor no peito.',
+      'PC-8': 'Acalma mente, alivia calor interno.',
+      'PC-7': 'Melhora sono, acalma coração.',
+      'IG-1': 'Dores de dente, febre, garganta inflamada.',
+      'IG-2': 'Remove calor e inflamação.',
+      'IG-4': 'Dores em geral, ativa imunidade.',
+      'ID-1': 'Revive consciência, melhora audição.',
+      'ID-3': 'Dor cervical e torcicolo.',
+      'ID-5': 'Dor de cabeça e pescoço.',
+      'SJ-1': 'Dor no ouvido, garganta seca.',
+      'SJ-2': 'Dores no braço e ombro.',
+      'SJ-4': 'Alivia dor no punho e tensão.'
     };
 
     const video = document.getElementById('video');
@@ -50,18 +65,89 @@
       pontosPlotados = [];
 
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
+        const lm = results.multiHandLandmarks[0];
 
-        const lu11 = landmarks[4];
-        const lu10 = landmarks[3];
-        const lu9 = landmarks[0];
+        function pixel(index, dx = 0, dy = 0) {
+          return {
+            x: lm[index].x + dx / canvas.width,
+            y: lm[index].y + dy / canvas.height
+          };
+        }
 
-        desenharPonto('LU-11', lu11, 'yellow');
-        desenharPonto('LU-10', lu10, 'orange');
-        desenharPonto('LU-9', lu9, 'red');
+        function deslocar(indexBase, indexRef, magnitude) {
+          const base = lm[indexBase];
+          const ref = lm[indexRef];
+          let dx = ref.x - base.x;
+          let dy = ref.y - base.y;
+          const comprimento = Math.sqrt(dx * dx + dy * dy);
+          if (comprimento === 0) return { x: base.x, y: base.y };
+          dx /= comprimento;
+          dy /= comprimento;
+          return {
+            x: base.x + dx * (magnitude / canvas.width),
+            y: base.y + dy * (magnitude / canvas.height)
+          };
+        }
 
-        desenharLinha(lu11, lu10, 'orange');
-        desenharLinha(lu10, lu9, 'red');
+        const meridianos = {
+          'LU': {
+            cor: 'yellow',
+            pontos: [
+              ['LU-11', pixel(4)],
+              ['LU-10', pixel(3)],
+              ['LU-9', deslocar(0, 9, 30)]
+            ]
+          },
+          'HT': {
+            cor: 'magenta',
+            pontos: [
+              ['HT-9', pixel(20)],
+              ['HT-8', pixel(19)],
+              ['HT-7', deslocar(0, 17, 30)]
+            ]
+          },
+          'PC': {
+            cor: 'red',
+            pontos: [
+              ['PC-9', pixel(12)],
+              ['PC-8', pixel(9)],
+              ['PC-7', pixel(0)]
+            ]
+          },
+          'IG': {
+            cor: 'lime',
+            pontos: [
+              ['IG-1', pixel(8)],
+              ['IG-2', pixel(7)],
+              ['IG-4', { x: (lm[5].x + lm[1].x)/2, y: (lm[5].y + lm[1].y)/2 }]
+            ]
+          },
+          'ID': {
+            cor: 'orange',
+            pontos: [
+              ['ID-1', pixel(20)],
+              ['ID-3', pixel(17)],
+              ['ID-5', deslocar(0, 17, 30)]
+            ]
+          },
+          'SJ': {
+            cor: 'purple',
+            pontos: [
+              ['SJ-1', pixel(16)],
+              ['SJ-2', pixel(15)],
+              ['SJ-4', pixel(0)]
+            ]
+          }
+        };
+
+        for (const m of Object.values(meridianos)) {
+          const pontos = m.pontos;
+          for (let i = 0; i < pontos.length; i++) {
+            const [nome, pos] = pontos[i];
+            desenharPonto(nome, pos, m.cor);
+            if (i < pontos.length - 1) desenharLinha(pos, pontos[i + 1][1], m.cor);
+          }
+        }
       }
     });
 
@@ -102,7 +188,7 @@
       for (const p of pontosPlotados) {
         const dx = mx - p.x;
         const dy = my - p.y;
-        if (Math.sqrt(dx*dx + dy*dy) < 10) {
+        if (Math.sqrt(dx * dx + dy * dy) < 10) {
           tooltip.style.left = `${e.clientX + 10}px`;
           tooltip.style.top = `${e.clientY + 10}px`;
           tooltip.innerText = `${p.nome}:\n${funcoes[p.nome] || 'Sem descrição'}`;
