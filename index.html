@@ -9,15 +9,15 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { 
-      font-family: Arial, sans-serif; 
-      text-align: center; 
-      margin: 0; 
-      padding: 20px; 
-      background: #f5f5f5; 
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
     }
     h1 { font-size: 1.8em; margin-bottom: 10px; }
-    video, canvas {
+    canvas {
       width: 100%;
       height: auto;
       max-width: 640px;
@@ -35,11 +35,15 @@
       pointer-events: none;
       z-index: 10;
     }
+    /* Oculta completamente o elemento de vídeo */
+    video#video {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
   <h1>🖐️ Detecção de Pontos de Acupuntura</h1>
-  <video id="video" autoplay playsinline muted style="width:0;height:0;position:absolute;left:-9999px;top:-9999px;"></video>
+  <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
   <div id="tooltip"></div>
 
