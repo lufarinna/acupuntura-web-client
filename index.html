@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Detecção de Pontos de Acupuntura</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <style>
+    body { text-align: center; font-family: Arial; }
+    canvas { border: 2px solid #ccc; margin-top: 20px; }
+    #tooltip {
+      position: absolute;
+      background: #222;
+      color: white;
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 14px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🖐️ Detecção de Pontos de Acupuntura</h1>
+  <video id="video" autoplay playsinline width="640" height="480" style="display:none"></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <div id="tooltip"></div>
+
+  <script>
+    const funcoes = {
+      'LU-11': 'Reanima consciência, alivia calor e garganta.',
+      'LU-10': 'Melhora tosse seca, garganta inflamada.',
+      'LU-9': 'Tonifica pulmão e circulação.',
+    };
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+    let pontosPlotados = [];
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; });
+
+    const hands = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    hands.onResults(results => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      pontosPlotados = [];
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+
+        const lu11 = landmarks[4];
+        const lu10 = landmarks[3];
+        const lu9 = landmarks[0];
+
+        desenharPonto('LU-11', lu11, 'yellow');
+        desenharPonto('LU-10', lu10, 'orange');
+        desenharPonto('LU-9', lu9, 'red');
+
+        desenharLinha(lu11, lu10, 'orange');
+        desenharLinha(lu10, lu9, 'red');
+      }
+    });
+
+    const camera = new Camera(video, {
+      onFrame: async () => await hands.send({ image: video }),
+      width: 640,
+      height: 480
+    });
+    camera.start();
+
+    function desenharPonto(nome, ponto, cor) {
+      const x = ponto.x * canvas.width;
+      const y = ponto.y * canvas.height;
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, 2 * Math.PI);
+      ctx.fillStyle = cor;
+      ctx.fill();
+      ctx.font = '12px Arial';
+      ctx.fillText(nome, x + 8, y);
+      pontosPlotados.push({ nome, x, y });
+    }
+
+    function desenharLinha(p1, p2, cor) {
+      ctx.beginPath();
+      ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+      ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      tooltip.style.display = 'none';
+
+      for (const p of pontosPlotados) {
+        const dx = mx - p.x;
+        const dy = my - p.y;
+        if (Math.sqrt(dx*dx + dy*dy) < 10) {
+          tooltip.style.left = `${e.clientX + 10}px`;
+          tooltip.style.top = `${e.clientY + 10}px`;
+          tooltip.innerText = `${p.nome}:\n${funcoes[p.nome] || 'Sem descrição'}`;
+          tooltip.style.display = 'block';
+          break;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
